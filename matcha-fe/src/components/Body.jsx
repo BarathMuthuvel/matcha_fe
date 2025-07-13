@@ -1,12 +1,16 @@
 import React from "react";
-import NavBar from "./components/NavBar";
+import NavBar from "./NavBar";
 import { Outlet } from "react-router-dom";
+import Footer from "./Footer";
 
 const Body = () => {
   return (
     <div>
       <NavBar />
-      <Outlet />
+      <div className="min-h-[calc(100vh-64px)]">
+        <Outlet />
+      </div>
+      <Footer />
     </div>
   );
 };

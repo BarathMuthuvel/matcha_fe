@@ -1,14 +1,30 @@
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
+import { Link, useNavigate } from "react-router-dom";
+import { LOGOUT_URL } from "../utils/constants";
+import axios from "axios";
+import { removeUser } from "../store/userSlice";
 
 const NavBar = () => {
   const user = useSelector((state) => state.user);
+  const dispatch = useDispatch();
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+    try {
+      const res = await axios.post(LOGOUT_URL, {}, { withCredentials: true });
+      dispatch(removeUser(res.data));
+      return navigate("/login");
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   return (
     <div className="navbar bg-base-300 shadow-sm">
       <div className="flex-1">
-        <a href="/" className="btn btn-ghost text-xl font-serif tracking-wide">
+        <Link to="/" className="btn btn-ghost text-xl font-serif tracking-wide">
           ✨Matcha
-        </a>
+        </Link>
       </div>
       {user && (
         <div className="flex items-center gap-2 mr-5">
@@ -18,7 +34,7 @@ const NavBar = () => {
                 <img
                   alt="User Avatar"
                   src={
-                    user.User.profilePicture ||
+                    user.user.profilePicture ||
                     "https://via.placeholder.com/150"
                   }
                 />
@@ -29,21 +45,23 @@ const NavBar = () => {
               className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow"
             >
               <li>
-                <a href="#profile" className="justify-between">
+                <Link to="/profile" className="justify-between">
                   Profile <span className="badge">New</span>
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#settings">Settings</a>
+                <Link to="/settings">Settings</Link>
               </li>
               <li>
-                <a href="#logout">Logout</a>
+                <button onClick={handleLogout} className="btn btn-ghost">
+                  Logout
+                </button>
               </li>
             </ul>
           </div>
 
           <p className="font-serif text-base tracking-wide">
-            {user.User.firstName || "Anonymous"}
+            {user.user.firstName || "Anonymous"}
           </p>
         </div>
       )}

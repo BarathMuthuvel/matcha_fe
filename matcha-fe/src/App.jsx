@@ -15,7 +15,7 @@ function App() {
           <Routes>
             {/* Define your routes here */}
             <Route path="/" element={<Body />}>
-              <Route path="/" element={<Feed />} />
+              <Route index element={<Feed />} />
               <Route path="/login" element={<Login />} />
               <Route path="/profile" element={<Profile />} />
             </Route>

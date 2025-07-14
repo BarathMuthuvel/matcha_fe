@@ -6,8 +6,9 @@ import { useNavigate } from "react-router-dom";
 import { LOGIN_URL } from "../utils/constants";
 
 const Login = () => {
-  const [emailId, setEmailId] = useState("barath@example.com");
-  const [password, setPassword] = useState("Password@123");
+  const [emailId, setEmailId] = useState("john@example.com");
+  const [password, setPassword] = useState("StrongPass123!");
+  const [errorMessage, setErrorMessage] = useState("");
 
   const dispatch = useDispatch();
   const navigate = useNavigate();
@@ -29,6 +30,9 @@ const Login = () => {
       navigate("/"); // Redirect to home page on successful login
     } catch (error) {
       console.error("Login failed:", error);
+      setErrorMessage(
+        error.response?.data?.message || "Invalid email or password"
+      );
     }
   };
 
@@ -61,6 +65,7 @@ const Login = () => {
               onChange={(e) => setPassword(e.target.value)}
             />
           </div>
+          <p className="text-red-500">{errorMessage}</p>
           <div className="form-control mt-6">
             <button onClick={handleSubmit} className="btn btn-primary">
               Login

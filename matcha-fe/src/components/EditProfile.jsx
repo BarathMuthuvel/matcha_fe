@@ -1,26 +1,99 @@
 import { useState } from "react";
 import UserCard from "./UserCard";
+import { PROFILE_EDIT_URL } from "../utils/constants";
+import axios from "axios";
+import { useDispatch } from "react-redux";
+import { addUser } from "../store/userSlice";
 
 const EditProfile = ({ user }) => {
-  console.log("user in EditProfile:", user);
+  console.log("EditProfile received user prop:", user);
 
-  const [firstName, setFirstName] = useState(user.user.firstName || "");
-  const [lastName, setLastName] = useState(user.user.lastName || "");
-  const [age, setAge] = useState(user.user.age || "");
-  const [bio, setBio] = useState(user.user.bio || "");
-  const [skills, setSkills] = useState(user.user.skills || []);
+  const [firstName, setFirstName] = useState(user?.user?.firstName || "");
+  const [lastName, setLastName] = useState(user?.user?.lastName || "");
+  const [age, setAge] = useState(user?.user?.age || "");
+  const [bio, setBio] = useState(user?.user?.bio || "");
+  const [skills, setSkills] = useState(user?.user?.skills || []);
   const [profilePicture, setProfilePicture] = useState(
-    user.user.profilePicture || ""
+    user?.user?.profilePicture || ""
   );
-  const [gender, setGender] = useState(user.user.gender || "");
+  const [gender, setGender] = useState(user?.user?.gender || "");
   const [errorMessage, setErrorMessage] = useState("");
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const dispatch = useDispatch();
+
+  // Add safety check for user object
+  if (!user || !user.user) {
+    console.log("User object is missing or invalid:", user);
+    return <div className="text-center p-4">Loading user data...</div>;
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    // Log the data being sent
+    const requestData = {
+      firstName,
+      lastName,
+      age: parseInt(age) || 0,
+      bio,
+      skills,
+      profilePicture,
+      gender,
+    };
+
+    console.log("Sending profile update request:", requestData);
+
+    try {
+      const response = await axios.put(PROFILE_EDIT_URL, requestData, {
+        withCredentials: true,
+      });
+
+      console.log("API Response:", response);
+
+      if (response.status !== 200) {
+        throw new Error("Failed to update profile");
+      }
+
+      setErrorMessage(""); // Clear any previous error messages
+
+      // Check if response.data.user exists before dispatching
+      if (response.data && response.data.user) {
+        // Wrap the user object in the expected structure
+        dispatch(addUser({ user: response.data.user }));
+        setIsSuccess(true);
+        setTimeout(() => {
+          setIsSuccess(false);
+        }, 3000);
+      } else {
+        console.warn("Unexpected response structure:", response.data);
+        dispatch(addUser(response.data));
+      }
+    } catch (error) {
+      console.error("Error updating profile:", error);
+      console.error("Error details:", {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+      });
+      setErrorMessage(
+        error.response?.data?.message ||
+          error.message ||
+          "Failed to update profile"
+      );
+    }
   };
+
   return (
-    <div>
-      <div className="card bg-base-300 w-96 shadow-sm flex-shrink-0 mx-auto my-10">
+    <div className="flex items-center justify-center">
+      {isSuccess && (
+        <div className="toast toast-top toast-end mt-20">
+          <div className="alert alert-success">
+            <span>Profile updated successfully.</span>
+          </div>
+        </div>
+      )}
+      <div className="card bg-base-300 w-96 shadow-sm flex-shrink-0 mx-10 my-10">
         <div className="card-body">
           <h2 className="card-title text-2xl">Edit Profile</h2>
           <form className="space-y-4">
@@ -64,13 +137,16 @@ const EditProfile = ({ user }) => {
               <label className="label">
                 <span className="label-text">Gender</span>
               </label>
-              <input
-                type="text"
-                placeholder="Gender"
-                className="input input-bordered"
+
+              <select
+                className="select select-bordered"
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
-              />
+              >
+                <option value="male">Male</option>
+                <option value="female">Female</option>
+                <option value="other">Other</option>
+              </select>
             </div>
 
             <div className="form-control space-y-1">
@@ -92,10 +168,13 @@ const EditProfile = ({ user }) => {
                 type="text"
                 placeholder="Skills (comma separated)"
                 className="input input-bordered"
-                value={skills.join(", ")}
+                value={Array.isArray(skills) ? skills.join(", ") : ""}
                 onChange={(e) =>
                   setSkills(
-                    e.target.value.split(",").map((skill) => skill.trim())
+                    e.target.value
+                      .split(",")
+                      .map((skill) => skill.trim())
+                      .filter((skill) => skill.length > 0)
                   )
                 }
               />

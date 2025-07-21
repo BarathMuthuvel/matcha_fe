@@ -1,6 +1,13 @@
-import React from "react";
+import React, { useState } from "react";
+import axios from "axios";
+import { REQUEST_SEND_STATUS_URL } from "../utils/constants";
 
-const UserCard = ({ user }) => {
+const UserCard = ({ user, onStatusUpdate }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [status, setStatus] = useState(null); // 'interested', 'ignored', or null
+
+  console.log("UserCard received user:", user);
+
   if (!user) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -8,12 +15,66 @@ const UserCard = ({ user }) => {
       </div>
     );
   }
-  // console.log("user", user);
 
-  // Destructure user data for use in JSX
-  let firstName, lastName, profilePicture, bio, skills, gender, age;
-  ({ firstName, lastName, profilePicture, bio, skills, gender, age } =
-    user.user || {});
+  // Handle different possible data structures
+  let userData = user;
+
+  // If user has a nested 'user' property, use that
+  if (user.user && typeof user.user === "object") {
+    userData = user.user;
+  }
+
+  // If user is an array, take the first element
+  if (Array.isArray(user)) {
+    userData = user[0];
+  }
+
+  // Destructure user data for use in JSX with fallbacks
+  const {
+    firstName = "Unknown",
+    lastName = "User",
+    profilePicture,
+    bio = "No bio available",
+    skills = [],
+    gender = "Other",
+    age = "N/A",
+    github,
+    linkedin,
+    _id: userId,
+  } = userData || {};
+
+  const handleStatusUpdate = async (newStatus) => {
+    if (!userId || isLoading) return;
+
+    setIsLoading(true);
+    try {
+      const response = await axios.post(
+        `${REQUEST_SEND_STATUS_URL}/${newStatus}/${userId}`,
+        {},
+        { withCredentials: true }
+      );
+
+      // Check if the response indicates success
+      if (response.data && (response.data.success || response.status === 200)) {
+        setStatus(newStatus);
+        // Call the parent callback if provided
+        if (onStatusUpdate) {
+          onStatusUpdate(userId, newStatus);
+        }
+      } else {
+        console.error("API response indicates failure:", response.data);
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      if (error.response) {
+        console.error("Error response:", error.response.data);
+        console.error("Error status:", error.response.status);
+      }
+      // You might want to show a toast notification here
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-base-100">
@@ -88,11 +149,11 @@ const UserCard = ({ user }) => {
               </div>
             )}
             {/* Socials row (GitHub/LinkedIn if available) */}
-            {(user.github || user.linkedin) && (
+            {(github || linkedin) && (
               <div className="flex gap-4 justify-center mb-4">
-                {user.github && (
+                {github && (
                   <a
-                    href={user.github}
+                    href={github}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="tooltip"
@@ -107,9 +168,9 @@ const UserCard = ({ user }) => {
                     </svg>
                   </a>
                 )}
-                {user.linkedin && (
+                {linkedin && (
                   <a
-                    href={user.linkedin}
+                    href={linkedin}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="tooltip"
@@ -126,31 +187,65 @@ const UserCard = ({ user }) => {
                 )}
               </div>
             )}
-            <div className="card-actions mt-2 w-full flex justify-between">
-              <button
-                className="btn btn-circle btn-outline btn-error text-2xl w-16 h-16 flex items-center justify-center shadow hover:scale-110 transition-transform"
-                title="Ignore"
-              >
-                <span role="img" aria-label="Ignore">
-                  👎
+
+            {/* Status Display */}
+            {status && (
+              <div className="mb-4">
+                <span
+                  className={`badge badge-lg ${
+                    status === "interested" ? "badge-success" : "badge-error"
+                  } text-white px-4 py-2 text-sm font-semibold`}
+                >
+                  {status === "interested" ? "✅ Interested" : "❌ Ignored"}
                 </span>
-              </button>
-              <button
-                className="btn btn-circle btn-primary text-2xl w-20 h-20 flex items-center justify-center shadow-lg hover:scale-110 transition-transform"
-                title="Connect"
-              >
-                <span role="img" aria-label="Connect">
-                  🤝
+              </div>
+            )}
+
+            {/* Loading indicator */}
+            {isLoading && (
+              <div className="mb-4">
+                <span className="loading loading-spinner loading-md text-primary"></span>
+                <span className="ml-2 text-sm text-base-content/70">
+                  Processing...
                 </span>
-              </button>
-              <button
-                className="btn btn-circle btn-outline btn-warning text-2xl w-16 h-16 flex items-center justify-center shadow hover:scale-110 transition-transform"
-                title="Super Connect"
-              >
-                <span role="img" aria-label="Super Connect">
-                  🚀
-                </span>
-              </button>
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="card-actions mt-2 w-full flex justify-center gap-4">
+              {!status || status === "ignored" ? (
+                <button
+                  className={`btn btn-lg ${
+                    status === "ignored" ? "btn-success" : "btn-primary"
+                  } text-white px-6 py-3 shadow-lg hover:scale-105 transition-transform ${
+                    isLoading ? "loading" : ""
+                  }`}
+                  onClick={() => handleStatusUpdate("interested")}
+                  disabled={isLoading}
+                  title="Interested"
+                >
+                  {!isLoading && <span className="mr-2">👍</span>}
+                  Interested
+                </button>
+              ) : null}
+
+              {!status || status === "interested" ? (
+                <button
+                  className={`btn btn-lg ${
+                    status === "interested"
+                      ? "btn-error"
+                      : "btn-outline btn-error"
+                  } text-white px-6 py-3 shadow-lg hover:scale-105 transition-transform ${
+                    isLoading ? "loading" : ""
+                  }`}
+                  onClick={() => handleStatusUpdate("ignored")}
+                  disabled={isLoading}
+                  title="Ignore"
+                >
+                  {!isLoading && <span className="mr-2">👎</span>}
+                  Ignore
+                </button>
+              ) : null}
             </div>
           </div>
         </div>

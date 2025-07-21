@@ -31,18 +31,25 @@ const EditProfile = ({ user }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    // Validate and prepare the data
+    const ageNumber = parseInt(age);
+    if (isNaN(ageNumber) || ageNumber < 0) {
+      setErrorMessage("Please enter a valid age");
+      return;
+    }
+
     // Log the data being sent
     const requestData = {
       firstName,
       lastName,
-      age: parseInt(age) || 0,
+      age: ageNumber,
       bio,
       skills,
       profilePicture,
       gender,
     };
 
-    console.log("Sending profile update request:", requestData);
+    console.log("Sending request data:", requestData);
 
     try {
       const response = await axios.put(PROFILE_EDIT_URL, requestData, {
@@ -50,24 +57,40 @@ const EditProfile = ({ user }) => {
       });
 
       console.log("API Response:", response);
+      console.log("Response status:", response.status);
+      console.log("Response data:", response.data);
 
-      if (response.status !== 200) {
-        throw new Error("Failed to update profile");
-      }
+      // Check if the response is successful (2xx status codes)
+      if (response.status >= 200 && response.status < 300) {
+        setErrorMessage(""); // Clear any previous error messages
 
-      setErrorMessage(""); // Clear any previous error messages
+        // Check if response.data.user exists before dispatching
+        if (response.data && response.data.user) {
+          // Merge the returned user data with the current form data
+          // to preserve fields that might not be returned by the API
+          const updatedUser = {
+            ...response.data.user,
+            age: age || response.data.user.age,
+            bio: bio || response.data.user.bio,
+            gender: gender || response.data.user.gender,
+            skills: skills || response.data.user.skills || [],
+            profilePicture: profilePicture || response.data.user.profilePicture,
+          };
 
-      // Check if response.data.user exists before dispatching
-      if (response.data && response.data.user) {
-        // Wrap the user object in the expected structure
-        dispatch(addUser({ user: response.data.user }));
-        setIsSuccess(true);
-        setTimeout(() => {
-          setIsSuccess(false);
-        }, 3000);
+          console.log("Updated user data:", updatedUser);
+
+          // Wrap the user object in the expected structure
+          dispatch(addUser({ user: updatedUser }));
+          setIsSuccess(true);
+          setTimeout(() => {
+            setIsSuccess(false);
+          }, 3000);
+        } else {
+          console.warn("Unexpected response structure:", response.data);
+          dispatch(addUser(response.data));
+        }
       } else {
-        console.warn("Unexpected response structure:", response.data);
-        dispatch(addUser(response.data));
+        throw new Error(`Failed to update profile. Status: ${response.status}`);
       }
     } catch (error) {
       console.error("Error updating profile:", error);
@@ -138,15 +161,13 @@ const EditProfile = ({ user }) => {
                 <span className="label-text">Gender</span>
               </label>
 
-              <select
-                className="select select-bordered"
+              <input
+                type="text"
+                placeholder="Gender"
+                className="input input-bordered"
                 value={gender}
                 onChange={(e) => setGender(e.target.value)}
-              >
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
+              />
             </div>
 
             <div className="form-control space-y-1">
@@ -193,7 +214,11 @@ const EditProfile = ({ user }) => {
             </div>
             <p className="text-red-500">{errorMessage}</p>
             <div className="form-control mt-6">
-              <button onClick={handleSubmit} className="btn btn-primary">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                className="btn btn-primary"
+              >
                 Save Changes
               </button>
             </div>
@@ -206,13 +231,14 @@ const EditProfile = ({ user }) => {
           user: {
             firstName,
             lastName,
-            age,
+            age: parseInt(age) || 0,
             gender,
             bio,
             skills,
             profilePicture,
           },
         }}
+        onStatusUpdate={null} // No status updates needed for profile preview
       />
     </div>
   );

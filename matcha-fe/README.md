@@ -13,9 +13,8 @@ sudo systemctl start nginx
 sudo systemctl status nginx
 sudo systemctl restart nginx
 sudo systemctl enable nginx
-sudo scp -r dist/_ /var/www/html/
-sudo cp -r dist/_ /var/www/html/
-/var/www/html/
+sudo scp -r dist/* /var/www/html/
+sudo cp -r dist/* /var/www/html/
 Enable port: 80 in AWS instance
 
 # Remove existing node if any

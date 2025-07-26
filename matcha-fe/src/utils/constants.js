@@ -1,4 +1,5 @@
-export const API_URL = "/api";
+export const API_URL =
+  location.hostname === "localhost" ? "http://localhost:9999" : "/api";
 export const LOGIN_URL = `${API_URL}/login`;
 export const SIGNUP_URL = `${API_URL}/signup`;
 export const LOGOUT_URL = `${API_URL}/logout`;

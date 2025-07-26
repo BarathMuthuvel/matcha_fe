@@ -1,4 +1,4 @@
-export const API_URL = "http://localhost:9999";
+export const API_URL = "/api";
 export const LOGIN_URL = `${API_URL}/login`;
 export const SIGNUP_URL = `${API_URL}/signup`;
 export const LOGOUT_URL = `${API_URL}/logout`;
